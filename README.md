@@ -7,4 +7,4 @@ ZYORA is the Virtual Try On Extension. SSV
 
 
 
-[🎥 Watch Demo](https://github.com/user-attachments/assets/782c7395-a312-4160-8b16-60aab0589ede))
+<!-- [🎥 Watch Demo](https://github.com/user-attachments/assets/782c7395-a312-4160-8b16-60aab0589ede) -->

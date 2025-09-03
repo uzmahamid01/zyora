@@ -1,7 +1,7 @@
 # zyora
 
 
-ZYORA is the Virtual Try On Extension. 
+ZYORA is the Virtual Try On Extension. SSV 
 
 <!-- ![ZYORA Demo](zyora.gif) -->
 

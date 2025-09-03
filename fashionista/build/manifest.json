@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "ZYORA",
+  "version": "1.0.0",
+  "description": "Fashion Virtual Try On Extension",
+  "permissions": ["sidePanel", "contextMenus"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "action": {
+    "default_title": "Open ZYORA"
+  },
+  "icons": {
+    "16": "Z.png",
+    "32": "Z.png",
+    "48": "Z.png",
+    "128": "Z.png"
+  }
+  
+}

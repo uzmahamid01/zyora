@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "outDir": "build",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "Node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+  },
+  "include": ["src/background.ts"]
+}

@@ -16,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Multer: use /tmp for Vercel ephemeral storage
+// Multer: use /tmp for Vercel ephemeral storage -- important!
 const upload = multer({ dest: "/tmp" });
 
 // Google Auth
@@ -124,7 +124,7 @@ app.post(
         });
       }
 
-      // Return base64 directly (do not try to write to /uploads on Vercel)
+      
       const generated = result.predictions[0].bytesBase64Encoded;
       res.json({ image: generated });
     } catch (err) {
@@ -134,10 +134,9 @@ app.post(
   }
 );
 
-// ------------------- EXPORT APP -------------------
 export default app;
 
-// ------------------- LOCAL TESTING -------------------
+// for local testing
 if (process.env.NODE_ENV !== "production") {
   app.listen(5000, () => console.log("Local server running on http://localhost:5000"));
 }

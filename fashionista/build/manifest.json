@@ -3,7 +3,7 @@
   "name": "ZYORA",
   "version": "1.0.0",
   "description": "Fashion Virtual Try On Extension",
-  "permissions": ["sidePanel", "contextMenus"],
+  "permissions": ["sidePanel"],
   "background": {
     "service_worker": "background.js"
   },

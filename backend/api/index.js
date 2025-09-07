@@ -15,10 +15,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// multer to handle uploads
+// multer for temporary file uploads
 const upload = multer({ dest: "/tmp" });
 
-// google auth
+// Google Auth
 const auth = new GoogleAuth({
   scopes: ["https://www.googleapis.com/auth/cloud-platform"],
 });
@@ -27,7 +27,7 @@ const REGION = process.env.GCP_REGION || "us-central1";
 
 // ------------------- ROUTES ------------------- //
 
-// fetch an external image
+// Fetch external image
 app.get("/fetch-image", async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: "URL is required" });
@@ -45,7 +45,7 @@ app.get("/fetch-image", async (req, res) => {
   }
 });
 
-// upload files (temporary in /tmp)
+// Upload files (temporary)
 app.post("/upload", upload.array("files", 4), (req, res) => {
   const files = req.files.map(file => ({
     originalName: file.originalname,
@@ -54,7 +54,7 @@ app.post("/upload", upload.array("files", 4), (req, res) => {
   res.json({ files });
 });
 
-// generate look using Vertex AI
+// Generate look using Vertex AI
 app.post(
   "/generate-look",
   upload.fields([
@@ -118,5 +118,5 @@ app.post(
   }
 );
 
-// --------- EXPORT (no app.listen) --------- //
+// Export app (no app.listen)
 export default app;

@@ -2,11 +2,27 @@ import { useState } from "react";
 import UploadYourPic from "./components/UploadYourPic";
 import UploadFitPic from "./components/UploadFitPic";
 import GenerateLook from "./components/GenerateLook";
+// import SignIn from "./components/SignIn";
 
 export default function App() {
   const [showGenerate, setShowGenerate] = useState(false);
   const [userImgs, setUserImgs] = useState<File[]>([]);
   const [fitImg, setFitImg] = useState<File | null>(null);
+  // const [signedIn, setSignedIn] = useState(false);
+  // const [token, setToken] = useState<string | null>(null);
+
+  // useEffect(() => {
+  //   if (chrome?.storage?.local) {
+  //     chrome.storage.local.get(["token"], (res) => {
+  //       if (res.token) setToken(res.token);
+  //     });
+  //   }
+  // }, []);
+  
+  // if (!token) {
+  //   console.log("User not signed in");
+  //   return <SignIn onSignIn={setToken} />;
+  // }
 
   return (
     <>

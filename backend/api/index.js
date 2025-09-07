@@ -2,38 +2,33 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import fetch from "node-fetch";
-import path from "path";
 import fs from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import dotenv from "dotenv";
 import { GoogleAuth } from "google-auth-library";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 const app = express();
-const PORT = process.env.PORT || 5000;
 
+// middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static(join(__dirname, "uploads")));
 
-const upload = multer({ dest: "uploads/" });
+// multer to handle uploads
+const upload = multer({ dest: "/tmp" });
 
-// Google Cloud Auth
+// google auth
 const auth = new GoogleAuth({
   scopes: ["https://www.googleapis.com/auth/cloud-platform"],
 });
 const PROJECT_ID = process.env.GCP_PROJECT_ID;
-const REGION = process.env.GCP_REGION || "us-central1"; // must be supported
+const REGION = process.env.GCP_REGION || "us-central1";
 
-// ------------------------------------------------------------------
-// Fetch image from external URL
-// ------------------------------------------------------------------
-app.get("/fetch-image", async (req, res) => {
+// ------------------- ROUTES ------------------- //
+
+// fetch an external image
+app.get("/api/fetch-image", async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: "URL is required" });
 
@@ -50,24 +45,20 @@ app.get("/fetch-image", async (req, res) => {
   }
 });
 
-// ------------------------------------------------------------------
-// Upload files
-// ------------------------------------------------------------------
-app.post("/upload", upload.array("files", 4), (req, res) => {
+// upload files (temporary in /tmp)
+app.post("/api/upload", upload.array("files", 4), (req, res) => {
   const files = req.files.map(file => ({
     originalName: file.originalname,
-    path: `/uploads/${file.filename}`,
+    path: file.path,
   }));
   res.json({ files });
 });
 
-// ------------------------------------------------------------------
-// Generate look with Vertex AI Try-On (AI only, no mock overlay)
-// ------------------------------------------------------------------
+// generate look using Vertex AI
 app.post(
-  "/generate-look",
+  "/api/generate-look",
   upload.fields([
-    { name: "userImgs", maxCount: 1 }, // Google API only supports 1 person image
+    { name: "userImgs", maxCount: 1 },
     { name: "fitImg", maxCount: 1 },
   ]),
   async (req, res) => {
@@ -107,7 +98,6 @@ app.post(
       });
 
       const result = await response.json();
-      console.log("Vertex AI response:", JSON.stringify(result, null, 2));
 
       if (!result.predictions || !result.predictions[0]?.bytesBase64Encoded) {
         return res.status(500).json({
@@ -117,16 +107,16 @@ app.post(
       }
 
       const generated = result.predictions[0].bytesBase64Encoded;
-      const outputFileName = `look_ai_${Date.now()}.png`;
-      const outputPath = path.join(__dirname, "uploads", outputFileName);
-      fs.writeFileSync(outputPath, Buffer.from(generated, "base64"));
-
-      res.json({ url: `/uploads/${outputFileName}` });
+      res.json({ image: generated }); // return as base64
     } catch (err) {
       console.error("Error in /generate-look:", err);
-      res.status(500).json({ error: "Failed to generate AI look", details: err.message });
+      res.status(500).json({
+        error: "Failed to generate AI look",
+        details: err.message,
+      });
     }
   }
 );
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+// --------- EXPORT (no app.listen) --------- //
+export default app;

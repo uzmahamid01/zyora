@@ -1,8 +1,6 @@
 
-// Open side panel when extension icon is clicked
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(e => console.error(e));
 
-// Create a context menu for images
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setOptions({
     path: "index.html",
@@ -15,7 +13,7 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// Handle context menu click
+
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (
     info.menuItemId === "zyora-try-on" &&
@@ -31,3 +29,4 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }, 1000);
   }
 });
+

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Download, Share2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Loader2 } from 'lucide-react';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -47,7 +47,7 @@ const GenerateLook = ({ userImgs, fitImg, onBack }: GenerateLookProps) => {
         <Button 
           onClick={onBack}
           variant="outline"
-            className="mb-6 bg-gradient-to-r from-[#000000] to-[#000000] text-white hover:bg-gradient-to-r hover:from-[#222] hover:to-[#222] hover:text-white"
+            className="mb-6 bg-gradient-to-r from-[#000000] to-[#000000] text-white hover:bg-gradient-to-r hover:from-[#222] hover:to-[#222] hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Upload
@@ -55,8 +55,8 @@ const GenerateLook = ({ userImgs, fitImg, onBack }: GenerateLookProps) => {
 
         <Card className="p-8 bg-card/10 backdrop-blur-sm border-fashion-accent/20">
           <div className="text-center space-y-6">
-            <h2 className="text-2xl font-medium text-black">Your Virtual Try-On</h2>
-            
+            <h2 className="text-2xl font-medium text-black">Your Try-On Look</h2>
+
             {!generatedImage && !isGenerating && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
@@ -154,18 +154,39 @@ const GenerateLook = ({ userImgs, fitImg, onBack }: GenerateLookProps) => {
                 <div className="flex gap-3 justify-center">
                   <Button 
                     variant="outline"
-                    className="bg-gradient-to-r from-[#000000] to-[#000000] text-white"
+                    className="bg-gradient-to-r from-[#000000] to-[#000000] text-white hover:bg-gradient-to-r hover:from-[#222] hover:to-[#222] hover:text-white "
+                    onClick={async () => {
+                      if (generatedImage) {
+                        try {
+                          const response = await fetch(generatedImage);
+                          const blob = await response.blob();
+                          const url = URL.createObjectURL(blob);
+                    
+                          const link = document.createElement("a");
+                          link.href = url;
+                          link.download = "zyora-look.png";
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                    
+                          // Clean up blob URL after download
+                          URL.revokeObjectURL(url);
+                        } catch (error) {
+                          console.error("Download failed:", error);
+                        }
+                      }
+                    }}
                   >
                     <Download className="w-4 h-4 mr-2 text-white" />
-                    Download
+                    Save the Look
                   </Button>
-                  <Button 
+                  {/* <Button 
                     variant="outline"
                     className="bg-gradient-to-r from-[#000000] to-[#000000] text-white"
                   >
                     <Share2 className="w-4 h-4 mr-2 text-white" />
                     Share
-                  </Button>
+                  </Button> */}
                 </div>
               </div>
             )}

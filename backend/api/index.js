@@ -28,7 +28,7 @@ const REGION = process.env.GCP_REGION || "us-central1";
 // ------------------- ROUTES ------------------- //
 
 // fetch an external image
-app.get("/api/fetch-image", async (req, res) => {
+app.get("/fetch-image", async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: "URL is required" });
 
@@ -46,7 +46,7 @@ app.get("/api/fetch-image", async (req, res) => {
 });
 
 // upload files (temporary in /tmp)
-app.post("/api/upload", upload.array("files", 4), (req, res) => {
+app.post("/upload", upload.array("files", 4), (req, res) => {
   const files = req.files.map(file => ({
     originalName: file.originalname,
     path: file.path,
@@ -56,7 +56,7 @@ app.post("/api/upload", upload.array("files", 4), (req, res) => {
 
 // generate look using Vertex AI
 app.post(
-  "/api/generate-look",
+  "/generate-look",
   upload.fields([
     { name: "userImgs", maxCount: 1 },
     { name: "fitImg", maxCount: 1 },

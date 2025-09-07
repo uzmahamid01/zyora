@@ -27,9 +27,10 @@ const GenerateLook = ({ userImgs, fitImg, onBack }: GenerateLookProps) => {
 
   setIsGenerating(true);
   try {
-    const res = await fetch("http://localhost:5000/generate-look", { method: "POST", body: formData });
+    const res = await fetch("https://zyora-szo7.vercel.app/generate-look", { method: "POST", body: formData });
+
     const data = await res.json();
-    setGeneratedImage(`http://localhost:5000${data.url}`);
+    setGeneratedImage(`https://zyora-szo7.vercel.app${data.url}`);
   } catch {
     alert("Failed to generate look");
   } finally {

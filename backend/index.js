@@ -20,9 +20,16 @@ app.use(express.urlencoded({ extended: true }));
 const upload = multer({ dest: "/tmp" });
 
 // Google Auth
+// const auth = new GoogleAuth({
+//   scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+// });
+const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+
 const auth = new GoogleAuth({
+  credentials,
   scopes: ["https://www.googleapis.com/auth/cloud-platform"],
 });
+
 const PROJECT_ID = process.env.GCP_PROJECT_ID;
 const REGION = process.env.GCP_REGION || "us-central1";
 

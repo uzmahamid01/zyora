@@ -3,10 +3,16 @@
   "name": "ZYORA",
   "version": "1.0.0",
   "description": "Fashion Virtual Try On Extension",
-  "permissions": ["sidePanel"],
+  "permissions": ["sidePanel", "identity", "contextMenus", "storage", "offscreen"],
   "background": {
     "service_worker": "background.js"
   },
+
+
+"host_permissions": [
+    "https://*.firebaseapp.com/*"
+  ],
+
   "side_panel": {
     "default_path": "index.html"
   },
@@ -18,5 +24,14 @@
     "32": "Z.png",
     "48": "Z.png",
     "128": "Z.png"
+  },
+  "oauth2": {
+    "client_id": "778832172684-vh5dmc78got0faliu09gmpvg4odsufv5.apps.googleusercontent.com",
+    "scopes": [
+      "openid", 
+      "email", 
+      "profile"
+    ]
   }
+  
 }

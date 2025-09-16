@@ -1,47 +1,72 @@
-// src/components/GenerateLook.tsx
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Download, Loader2 } from 'lucide-react';
-
+import {Download, Loader2 } from 'lucide-react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { auth, db } from '../lib/firebase';
+import { toast } from '../components/hooks/use-toast';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface GenerateLookProps {
   userImgs: File[];
   fitImg: File | null;
   onBack: () => void;
+  onGenerated: () => void;
 }
 
-
-const GenerateLook = ({ userImgs, fitImg, onBack }: GenerateLookProps) => {
+const GenerateLook = ({ userImgs, fitImg, onGenerated }: GenerateLookProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [userImgIdx, setUserImgIdx] = useState(0);
 
-  const handleGenerate = async () => {
-  const formData = new FormData();
-  userImgs.forEach(imgObj => formData.append("userImgs", imgObj));
-  if (fitImg) {
-    formData.append("fitImg", fitImg);
-  }
-
   
 
-  setIsGenerating(true);
-  try {
-    const res = await fetch("https://zyora-szo7.vercel.app/generate-look", { method: "POST", body: formData });
+  const handleGenerate = async () => {
 
-    const data = await res.json();
-    // setGeneratedImage(`https://zyora-szo7.vercel.app${data.url}`);
-    setGeneratedImage(`data:image/png;base64,${data.image}`);
+    
+    if (!fitImg || userImgs.length === 0) return;
 
-  } catch {
-    alert("Failed to generate look");
-  } finally {
-    setIsGenerating(false);
-  }
-};
+    const formData = new FormData();
+    userImgs.forEach((img) => formData.append("userImgs", img));
+    formData.append("fitImg", fitImg);
 
+    setIsGenerating(true);
+
+    try {
+      const res = await fetch("https://zyora-szo7.vercel.app/generate-look", { method: "POST", body: formData });
+      const data = await res.json();
+      const fullDataUrl = `data:image/png;base64,${data.image}`;
+      setGeneratedImage(fullDataUrl);
+
+      // Increment generated count ONLY on successful generation
+
+      onGenerated();
+     
+
+    } catch (e) {
+      console.error("Failed to generate look", e);
+      alert("Failed to generate look");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const saveToHistory = async () => {
+    if (!generatedImage) return toast({ title: 'No image', description: 'No image to save' });
+    if (!auth.currentUser) return toast({ title: 'Not signed in', description: 'Sign in to save looks' });
+
+    try {
+      const looksRef = collection(db, 'users', auth.currentUser.uid, 'looks');
+      await addDoc(looksRef, {
+        image: generatedImage,
+        createdAt: serverTimestamp(),
+      });
+      toast({ title: 'Saved', description: 'Look saved successfully!' });
+    } catch (e) {
+      console.error('Failed to save look', e);
+      toast({ title: 'Error', description: 'Failed to save look' });
+    }
+  };
 
   const hasMultipleUserImgs = userImgs.length > 1;
   const currentUserImg = userImgs[userImgIdx] ?? null;
@@ -49,14 +74,9 @@ const GenerateLook = ({ userImgs, fitImg, onBack }: GenerateLookProps) => {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-2xl">
-        <Button 
-          onClick={onBack}
-          variant="outline"
-            className="mb-6 bg-gradient-to-r from-[#000000] to-[#000000] text-white hover:bg-gradient-to-r hover:from-[#222] hover:to-[#222] hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Upload
-        </Button>
+        {/* <Button onClick={onBack} variant="outline" className="mb-6">
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Upload
+        </Button> */}
 
         <Card className="p-8 bg-card/10 backdrop-blur-sm border-fashion-accent/20">
           <div className="text-center space-y-6">
@@ -136,62 +156,35 @@ const GenerateLook = ({ userImgs, fitImg, onBack }: GenerateLookProps) => {
                 </Button>
               </div>
             )}
+            
 
             {isGenerating && (
               <div className="space-y-4">
-                <div className="flex justify-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-fashion-accent" />
-                </div>
+                <Loader2 className="w-8 h-8 animate-spin text-fashion-accent mx-auto" />
                 <p className="text-fashion-accent">Generating your look...</p>
               </div>
             )}
 
             {generatedImage && (
               <div className="space-y-6">
-                <div className="max-w-md mx-auto">
-                  <img 
-                    src={generatedImage} 
-                    alt="Generated look" 
-                    className="w-full rounded-lg border border-fashion-accent/20"
-                  />
-                </div>
-                
+                <img src={generatedImage} alt="Generated look" className="w-full rounded-lg border border-fashion-accent/20" />
+
                 <div className="flex gap-3 justify-center">
-                  <Button 
-                    variant="outline"
-                    className="bg-gradient-to-r from-[#000000] to-[#000000] text-white hover:bg-gradient-to-r hover:from-[#222] hover:to-[#222] hover:text-white "
-                    onClick={async () => {
-                      if (generatedImage) {
-                        try {
-                          const response = await fetch(generatedImage);
-                          const blob = await response.blob();
-                          const url = URL.createObjectURL(blob);
-                    
-                          const link = document.createElement("a");
-                          link.href = url;
-                          link.download = "zyora-look.png";
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                    
-                          // Clean up blob URL after download
-                          URL.revokeObjectURL(url);
-                        } catch (error) {
-                          console.error("Download failed:", error);
-                        }
-                      }
-                    }}
-                  >
-                    <Download className="w-4 h-4 mr-2 text-white" />
-                    Save the Look
+                  <Button onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = generatedImage;
+                    link.download = `zyora-look-${Date.now()}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}>
+                    <Download className="w-4 h-4 mr-2" /> Download
                   </Button>
-                  {/* <Button 
-                    variant="outline"
-                    className="bg-gradient-to-r from-[#000000] to-[#000000] text-white"
-                  >
-                    <Share2 className="w-4 h-4 mr-2 text-white" />
-                    Share
-                  </Button> */}
+
+                  <Button onClick={saveToHistory}>
+                    
+                     Save
+                  </Button>
                 </div>
               </div>
             )}

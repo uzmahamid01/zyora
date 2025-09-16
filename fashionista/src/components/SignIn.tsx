@@ -1,7 +1,7 @@
 import React from "react";
 
 interface SignInProps {
-  onSignIn: () => void; // Calls the background sign-in flow
+  onSignIn: () => void; 
 }
 
 const SignIn: React.FC<SignInProps> = ({ onSignIn }) => {

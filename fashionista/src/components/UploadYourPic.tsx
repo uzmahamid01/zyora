@@ -6,10 +6,12 @@ interface Props {
   setUserImgs: (files: File[]) => void;
 }
 
-
 export default function UploadYourPic({ userImgs, setUserImgs }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
+  
+
+  
   const handleFileChange = (files: FileList | null) => {
     if (!files) return;
     let newFiles: File[] = Array.from(files);
@@ -18,13 +20,12 @@ export default function UploadYourPic({ userImgs, setUserImgs }: Props) {
       alert('Some files were larger than 10MB and were not added.');
     }
     // Only allow up to 4 images - need to change 
-    const combined = [...userImgs, ...newFiles].slice(0, 4);
-    if (combined.length > 4) {
-      alert('You can only upload up to 4 images.');
+    const combined = [...userImgs, ...newFiles].slice(0, 1);
+    if (combined.length > 1) {
+      alert('You can only upload up to 1 image.');
     }
     setUserImgs(combined);
   };
-
   const handleDelete = (idx: number) => {
     setUserImgs(userImgs.filter((_, i) => i !== idx));
   };
@@ -39,7 +40,6 @@ export default function UploadYourPic({ userImgs, setUserImgs }: Props) {
 
   return (
     <div className="flex flex-col items-center ">
-      {/* Heading */}
       {/* <h3 className="text-white text-[20px] font-[510] w-[188px] h-[31px] text-center">
         Upload Your Picture
       </h3> */}
@@ -77,13 +77,20 @@ export default function UploadYourPic({ userImgs, setUserImgs }: Props) {
               </div>
             ))}
             {userImgs.length < 4 && (
-              <button
-                className="bg-green-500 text-black py-2 px-4 rounded font-semibold"
-                  style={{ background: 'black', color: 'white', borderRadius: '8rem' }}
-                onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}
-              >
-                Upload More
-              </button>
+              // <button
+              //   className="bg-green-500 text-black py-2 px-4 rounded font-semibold"
+              //     style={{ background: 'black', color: 'white', borderRadius: '8rem' }}
+              //   onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}
+              // >
+              //   Upload More
+              // </button>
+              // <div
+              //   className="w-[70px] h-[70px] flex items-center justify-center border-2 border-dashed border-gray-400 rounded-lg cursor-pointer"
+              //   onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}
+              // >
+              //   <MdImage size={30} className="text-gray-400" />
+              // </div>
+              <p className='text-gray-600 ml-4'> only 1 upload available</p>
             )}
           </div>
         )}

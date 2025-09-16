@@ -1,14 +1,16 @@
 import { useRef, useState } from 'react';
 import { MdImage } from 'react-icons/md';
 
+
 interface Props {
   fitImg: File | null;
   setFitImg: (file: File | null) => void;
   onTryOn: () => void;
   userImgs?: File[];
+  looksCount?: number; // New prop to get the current look count
 }
 
-export default function UploadFitPic({ fitImg, setFitImg, onTryOn, userImgs }: Props) {
+export default function UploadFitPic({ fitImg, setFitImg, onTryOn, userImgs, looksCount }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [imageUrl, setImageUrl] = useState('');
 
@@ -35,7 +37,7 @@ export default function UploadFitPic({ fitImg, setFitImg, onTryOn, userImgs }: P
     const file = files[0];
     if (file.size > 10 * 1024 * 1024) alert("File size exceeds 10MB");
     else setFitImg(file);
-  };
+  }
 
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
@@ -85,6 +87,15 @@ export default function UploadFitPic({ fitImg, setFitImg, onTryOn, userImgs }: P
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+  };
+
+  const handleTryOn = () => {
+    console.log("Current looksCount:", looksCount);
+    if ((looksCount ?? 0) >= 4) {
+      alert("You’ve reached your free limit of 4 looks. Upgrade your plan to generate more.");
+      return;
+    }
+    onTryOn();
   };
 
   return (
@@ -149,7 +160,7 @@ export default function UploadFitPic({ fitImg, setFitImg, onTryOn, userImgs }: P
       <button
     className="mt-8 h-[48px] w-[188px] bg-gradient-to-r from-[#000000] to-[#000000] text-white font-semibold text-[16px]"
     style={{ borderRadius: '8rem' }}
-    onClick={onTryOn}
+    onClick={handleTryOn}
     disabled={!fitImg || (userImgs?.length ?? 0) === 0} 
   >
     

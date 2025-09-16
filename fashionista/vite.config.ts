@@ -11,7 +11,7 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          src: 'public/manifest.json',
+          src: 'public/manifest.template.json',
           dest: '.',
         }
       ],

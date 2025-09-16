@@ -1,5 +1,3 @@
-const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
-const FIREBASE_HOSTING_URL = 'https://extension--auth-firebase.web.app'; 
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(e => console.error(e));
 
@@ -9,90 +7,40 @@ chrome.runtime.onInstalled.addListener(() => {
     enabled: true,
   });
 
-  chrome.contextMenus.create({
-    id: "zyora-try-on",
-    title: "Try On with ZYORA",
-    contexts: ["image"]
-  });
-});
-
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (
-    info.menuItemId === "zyora-try-on" &&
-    info.srcUrl &&
-    !info.srcUrl.startsWith("data:") &&
-    tab &&
-    typeof tab.windowId !== "undefined" &&
-    typeof tab.url !== "undefined"
-  ) {
-    chrome.sidePanel.open({ windowId: tab.windowId }).catch(e => console.error("Error opening side panel:", e));
-    setTimeout(() => {
-      chrome.runtime.sendMessage({ action: "setProductImage", url: info.srcUrl, pageUrl: tab.url });
-    }, 1000);
-  }
-});
-
-chrome.identity.getAuthToken({ interactive: true }, (token) => {
-  if (chrome.runtime.lastError) {
-    console.error(chrome.runtime.lastError);
-    return;
-  }
-  console.log("Google token:", token);
-});
-
-let creatingOffscreenDocument: Promise<void> | null = null;
-
-async function hasOffscreenDocument(): Promise<boolean> {
-  const docs = await chrome.offscreen?.hasDocument?.();
-  return !!docs;
-}
-
-async function setupOffscreenDocument(): Promise<void> {
-  if (await hasOffscreenDocument()) return;
-
-  if (creatingOffscreenDocument) {
-    await creatingOffscreenDocument;
-  } else {
-    creatingOffscreenDocument = chrome.offscreen!.createDocument({
-      url: OFFSCREEN_DOCUMENT_PATH,
-      reasons: [chrome.offscreen!.Reason.DOM_SCRAPING],
-      justification: 'Firebase Authentication'
-    });
-    await creatingOffscreenDocument;
-    creatingOffscreenDocument = null;
-  }
-}
-
-async function getAuthFromOffscreen(): Promise<any> {
-  await setupOffscreenDocument();
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage({ action: 'getAuth', target: 'offscreen' }, (response) => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-      } else {
-        resolve(response);
-      }
-    });
-  });
-}
-
-chrome.runtime.onMessage.addListener((message: any, sender, sendResponse: (response?: any) => void) => {
-  if (message.action === 'signIn') {
-    getAuthFromOffscreen()
-      .then(user => {
-        chrome.storage.local.set({ user }, () => {
-          sendResponse({ user });
-        });
-      })
-      .catch(error => {
-        console.error('Authentication error:', error);
-        sendResponse({ error: (error as Error).message });
+  // Create context menu only if the API is available (some environments may not expose it)
+  if (chrome.contextMenus && typeof chrome.contextMenus.create === 'function') {
+    try {
+      chrome.contextMenus.create({
+        id: "zyora-try-on",
+        title: "Try On with ZYORA",
+        contexts: ["image"]
       });
-    return true; // Keep the message channel open
-  } else if (message.action === 'signOut') {
-    chrome.storage.local.remove('user', () => {
-      sendResponse();
-    });
-    return true;
+    } catch (e) {
+      console.error('Failed to create context menu:', e);
+    }
+  } else {
+    console.warn('chrome.contextMenus API is not available in this environment. Skipping context menu creation.');
   }
 });
+
+// Attach click listener only if the API exists and exposes onClicked
+if (chrome.contextMenus && chrome.contextMenus.onClicked && typeof chrome.contextMenus.onClicked.addListener === 'function') {
+  chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (
+      info.menuItemId === "zyora-try-on" &&
+      info.srcUrl &&
+      !info.srcUrl.startsWith("data:") &&
+      tab &&
+      typeof tab.windowId !== "undefined" &&
+      typeof tab.url !== "undefined"
+    ) {
+      chrome.sidePanel.open({ windowId: tab.windowId }).catch(e => console.error("Error opening side panel:", e));
+      setTimeout(() => {
+        chrome.runtime.sendMessage({ action: "setProductImage", url: info.srcUrl, pageUrl: tab.url });
+      }, 1000);
+    }
+  });
+} else {
+  console.warn('chrome.contextMenus.onClicked is not available; click handling disabled.');
+}
+

@@ -1,0 +1,13 @@
+ [
+    {
+    "origin": [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:3000",
+      "https://your-production-domain.com"
+    ],
+    "method": ["GET", "POST", "PUT", "HEAD", "OPTIONS"],
+    "responseHeader": ["Content-Type", "Authorization", "X-Firebase-Storage-Download-Tokens", "x-goog-resumable"],
+    "maxAgeSeconds": 3600
+  }
+]

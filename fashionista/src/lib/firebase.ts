@@ -3,6 +3,7 @@ import { getAuth, GoogleAuthProvider, signInWithCredential, onAuthStateChanged, 
 import { signInWithCustomToken } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: import.meta.env.PLASMO_PUBLIC_FIREBASE_PUBLIC_API_KEY || import.meta.env.VITE_FIREBASE_API_KEY || "__FIREBASE_API_KEY__",
@@ -20,6 +21,7 @@ const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig as an
 export const auth = getAuth(app as any);
 export const provider = new GoogleAuthProvider();
 export const db = getFirestore(app as any);
+export const storage = getStorage(app as any);
 
 export const signOutFirebase = async () => {
   try {
@@ -85,16 +87,43 @@ export async function signInWithGooglePopup() {
   try {
     return await signInWithPopup(auth, provider);
   } catch (err: any) {
-    // Handle COOP/COEP or window closing issues in some dev setups by falling back to redirect
-    console.warn("Popup sign-in failed, falling back to redirect:", err?.message || err);
+    console.warn("Popup sign-in failed:", err?.message || err);
+    
+    // Handle specific COOP/COEP errors
+    if (err?.message?.includes('Cross-Origin-Opener-Policy') || 
+        err?.message?.includes('window.closed')) {
+      console.log("COOP/COEP issue detected, trying alternative approach...");
+      
+      // Try to open popup in a different way
+      try {
+        const popup = window.open('', 'auth-popup', 'width=500,height=600,scrollbars=yes,resizable=yes');
+        if (popup) {
+          // Set a timeout to close popup if authentication doesn't complete
+          setTimeout(() => {
+            if (!popup.closed) {
+              popup.close();
+            }
+          }, 30000); // 30 second timeout
+        }
+        
+        // Try popup again
+        return await signInWithPopup(auth, provider);
+      } catch (retryErr) {
+        console.warn("Retry popup also failed:", retryErr);
+      }
+    }
+    
+    // Final fallback: try redirect
     try {
+      console.log("Attempting redirect authentication...");
       await signInWithRedirect(auth, provider);
       return;
-    } catch (e) {
-      console.error("Redirect sign-in also failed:", e);
-      throw e;
+    } catch (redirectErr) {
+      console.error("All authentication methods failed:", redirectErr);
+      throw new Error("Authentication failed. Please try again or check your browser settings.");
     }
   }
 }
 
 export default app;
+

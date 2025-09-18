@@ -10,6 +10,8 @@ import UserInfo from "./components/UserInfo";
 import { auth } from "./lib/firebase";
 import Profile from "./components/Profile";
 import History from "./components/History";
+import { countManager } from "./lib/countManager";
+import type { UserCounts } from "./lib/countManager";
 
 export default function App() {
   const [showGenerate, setShowGenerate] = useState(false);
@@ -18,16 +20,51 @@ export default function App() {
   const [signedIn, setSignedIn] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [looksCount, setLooksCount] = useState<number>(0);
+  const [userCounts, setUserCounts] = useState<UserCounts>({
+    generatedCount: 0,
+    savedCount: 0,
+    lastUpdated: new Date()
+  });
 
-  
-
+  // Load initial counts
   useEffect(() => {
     if (!auth.currentUser) return;
-    const countKey = `zyora:looks:count:${auth.currentUser.uid || auth.currentUser.email}`;
-    const count = parseInt(localStorage.getItem(countKey) || '0', 10) || 0;
-    setLooksCount(count);
+    
+    const loadCounts = async () => {
+      try {
+        const counts = await countManager.getCounts();
+        setUserCounts(counts);
+      } catch (error) {
+        console.warn('Failed to load counts:', error);
+      }
+    };
+    
+    loadCounts();
   }, [auth.currentUser]);
+
+  // Subscribe to real-time count updates
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    
+    const unsubscribe = countManager.subscribeToCounts((counts) => {
+      setUserCounts(counts);
+    });
+    
+    return unsubscribe;
+  }, [auth.currentUser]);
+
+  // Listen for count updates from other components
+  useEffect(() => {
+    const handler = () => {
+      // Trigger a refresh of counts
+      if (auth.currentUser) {
+        countManager.getCounts().then(setUserCounts).catch(console.warn);
+      }
+    };
+    
+    window.addEventListener('zyora:counts:updated', handler);
+    return () => window.removeEventListener('zyora:counts:updated', handler);
+  }, []);
 
   
   useEffect(() => {
@@ -53,7 +90,7 @@ export default function App() {
           <div className="absolute top-4 right-6 flex items-center gap-4">
             <div className="relative">
               <div className="absolute -top-2 -right-4 text-black rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
-                {looksCount}
+                {userCounts.savedCount}
               </div>
             </div>
             <div>
@@ -115,7 +152,7 @@ export default function App() {
                   setFitImg={setFitImg}
                   onTryOn={() => setShowGenerate(true)}
                   userImgs={userImgs}
-                  looksCount={looksCount} 
+                  looksCount={userCounts.savedCount} 
                 />
               </div>
             ) : (
@@ -125,15 +162,8 @@ export default function App() {
                   fitImg={fitImg}
                   onBack={() => setShowGenerate(false)}
                   onGenerated={() => {
-                   
-                    setLooksCount(prev => {
-                      const newCount = prev + 1;
-                      if (auth.currentUser) {
-                        const countKey = `zyora:looks:count:${auth.currentUser.uid || auth.currentUser.email}`;
-                        localStorage.setItem(countKey, String(newCount));
-                      }
-                      return newCount;
-                    });
+                    // Count is now managed centrally by countManager
+                    // No need to manually update here as it's handled in GenerateLook.tsx
                   }}
                 />
               </div>

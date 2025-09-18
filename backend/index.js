@@ -13,10 +13,46 @@ dotenv.config();
 const app = express();
 
 // ------------------- MIDDLEWARES -------------------
-app.use(cors());
+
+
+// Define allowed origins
+const allowedOrigins = [
+  "http://localhost:5173",   // dev
+  "chrome-extension://*",    // chrome extension
+  "https://your-frontend.com" // prod
+];
+
+// Apply CORS to all requests
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow chrome extensions
+    if (origin && origin.startsWith('chrome-extension://')) {
+      return callback(null, true);
+    }
+    
+    // Allow localhost for development
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Allow any localhost port for development
+    if (origin && origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
+}));
+
 // Allow larger payloads for base64 images
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 // Multer: use /tmp for Vercel ephemeral storage -- important!
 const upload = multer({ dest: "/tmp" });
@@ -62,34 +98,69 @@ const REGION = process.env.GCP_REGION || "us-central1";
 
 // ------------------- ROUTES ------------------- //
 
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    firebaseConfigured: !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+  });
+});
+
 // POST /exchange-token
 // Body: { access_token: string }
 // Verifies the Google access token and exchanges it for a Firebase custom token.
 app.post("/exchange-token", async (req, res) => {
+  console.log("Exchange token request received:", { 
+    hasAccessToken: !!req.body.access_token,
+    origin: req.get('origin'),
+    userAgent: req.get('user-agent')
+  });
+
   const { access_token } = req.body;
-  if (!access_token) return res.status(400).json({ error: "access_token is required" });
+  if (!access_token) {
+    console.error("No access token provided");
+    return res.status(400).json({ error: "access_token is required" });
+  }
 
   try {
     // Verify token via Google tokeninfo endpoint
+    console.log("Verifying token with Google...");
     const tokeninfoRes = await fetch(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${access_token}`);
     if (!tokeninfoRes.ok) {
       const body = await tokeninfoRes.text();
+      console.error("Token verification failed:", body);
       return res.status(400).json({ error: "Invalid access token", details: body });
     }
     const info = await tokeninfoRes.json();
+    console.log("Token verified for user:", info.sub);
 
-    // Use Firebase Admin to create a custom token for the user identified by 'sub'
-    // Ensure firebase-admin is initialized with service account credentials via env var GOOGLE_APPLICATION_CREDENTIALS_JSON
+    // Check if Firebase Admin is initialized
     if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)),
-      });
+      console.log("Initializing Firebase Admin...");
+      if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+        console.error("GOOGLE_APPLICATION_CREDENTIALS_JSON not set");
+        return res.status(500).json({ error: "Firebase Admin not configured" });
+      }
+      
+      try {
+        admin.initializeApp({
+          credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)),
+        });
+        console.log("Firebase Admin initialized successfully");
+      } catch (initErr) {
+        console.error("Failed to initialize Firebase Admin:", initErr);
+        return res.status(500).json({ error: "Failed to initialize Firebase Admin" });
+      }
     }
 
     const uid = info.sub; // Google user id
     const additionalClaims = { provider: "google" };
 
+    console.log("Creating custom token for user:", uid);
     const customToken = await admin.auth().createCustomToken(uid, additionalClaims);
+    console.log("Custom token created successfully");
+    
     res.json({ customToken });
   } catch (err) {
     console.error("Error in /exchange-token:", err);
@@ -229,11 +300,26 @@ app.post(
 );
 
 
+
+
+
 export default app;
 
 // for local testing
 if (process.env.NODE_ENV !== "production") {
-  app.listen(5000, () => console.log("Local server running on http://localhost:5000"));
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log("🚀 Backend server running on http://localhost:" + PORT);
+    console.log("📋 Available endpoints:");
+    console.log("  GET  /health - Health check");
+    console.log("  POST /exchange-token - Exchange Google token for Firebase token");
+    console.log("  POST /generate-look - Generate AI look");
+    console.log("  GET  /fetch-image - Fetch image by URL");
+    console.log("🔧 Environment check:");
+    console.log("  Firebase configured:", !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+    console.log("  GCP Project ID:", process.env.GCP_PROJECT_ID || "Not set");
+    console.log("  GCP Region:", process.env.GCP_REGION || "us-central1");
+  });
 }
 
 

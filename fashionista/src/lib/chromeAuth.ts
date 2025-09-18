@@ -1,4 +1,4 @@
-import { signInWithGoogleCredential, signInWithFirebaseCustomToken, signOutFirebase, signInWithGooglePopup } from "./firebase";
+import { signInWithGoogleCredential, signOutFirebase, signInWithGooglePopup } from "./firebase";
 import { toast } from "../components/hooks/use-toast";
 import { setLastAuthMethod } from "./authIndicator";
 
@@ -54,62 +54,17 @@ export async function signInWithChrome(interactive = true) {
     toast({ title: "Signed in", description: "Signed in with popup" });
     return res;
   }
-  // Exchange access token for a Firebase custom token via backend
+  // Skip backend token exchange and use direct Google credential authentication
+  // This avoids custom token mismatch issues when Firebase project is not properly configured
   try {
-  const BACKEND_URL = import.meta.env.PLASMO_PUBLIC_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
-
-  // Diagnostic logging to help track down "TypeError: Failed to fetch" errors
-  try {
-    console.debug("Attempting backend token exchange", { BACKEND_URL: BACKEND_URL.replace(/\/$/, ""), online: typeof navigator !== 'undefined' ? navigator.onLine : 'unknown' });
-  } catch (logErr) {
-    // ignore logging failure in some environments
-  }
-
-  const resp = await fetch(`${BACKEND_URL.replace(/\/$/, "")}/exchange-token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // explicit CORS mode to make intent clear; the backend must allow CORS for extension/browser origin
-      mode: 'cors',
-      body: JSON.stringify({ access_token: accessToken }),
-    });
-
-    if (!resp.ok) {
-      // Fallback: try signing in directly with Google credential using the access token
-      const credRes = await signInWithGoogleCredential(accessToken);
-      toast({ title: "Signed in", description: "Signed in with Google credential (access token)" });
-      setLastAuthMethod("chrome");
-      return credRes;
-    }
-
-    const { customToken } = await resp.json();
-    if (!customToken) {
-      const credRes = await signInWithGoogleCredential(accessToken);
-      toast({ title: "Signed in", description: "Signed in with Google credential (access token)" });
-      setLastAuthMethod("chrome");
-      return credRes;
-    }
-
-    const final = await signInWithFirebaseCustomToken(customToken);
-    toast({ title: "Signed in", description: "Signed in via backend token exchange" });
+    const credRes = await signInWithGoogleCredential(accessToken);
+    toast({ title: "Signed in", description: "Signed in with Google credential" });
     setLastAuthMethod("chrome");
-    return final;
+    return credRes;
   } catch (e) {
-    // Provide richer diagnostics to help the developer understand why fetch failed.
-    console.error("Token exchange failed, attempting direct credential sign-in:", e, {
-      note: 'Check that BACKEND_URL is correct and the backend is running and allowing CORS from this origin',
-      BACKEND_URL: import.meta.env.PLASMO_PUBLIC_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:5000",
-      online: typeof navigator !== 'undefined' ? navigator.onLine : 'unknown',
-    });
-    toast({ title: "Auth: token exchange failed", description: "Unable to contact backend to exchange token. Check backend URL, CORS, and that the server is running." });
-    try {
-      const credRes = await signInWithGoogleCredential(accessToken as string);
-      toast({ title: "Signed in", description: "Signed in with Google credential (access token)" });
-      setLastAuthMethod("chrome");
-      return credRes;
-    } catch (err) {
-      toast({ title: "Sign-in failed", description: String(err) });
-      throw err;
-    }
+    console.error("Direct credential sign-in failed:", e);
+    toast({ title: "Sign-in failed", description: "Unable to sign in with Google credential" });
+    throw e;
   }
 }
 

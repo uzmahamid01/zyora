@@ -7,7 +7,7 @@ interface Props {
   setFitImg: (file: File | null) => void;
   onTryOn: () => void;
   userImgs?: File[];
-  looksCount?: number; // New prop to get the current look count
+  looksCount?: number; 
 }
 
 export default function UploadFitPic({ fitImg, setFitImg, onTryOn, userImgs, looksCount }: Props) {

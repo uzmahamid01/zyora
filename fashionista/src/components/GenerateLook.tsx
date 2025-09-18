@@ -1,23 +1,149 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import {Download, Loader2 } from 'lucide-react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { auth, db } from '../lib/firebase';
+import { Download, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { auth, db, storage } from '../lib/firebase';
 import { toast } from '../components/hooks/use-toast';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { countManager } from '../lib/countManager';
 
 interface GenerateLookProps {
   userImgs: File[];
   fitImg: File | null;
-  onBack: () => void;
   onGenerated: () => void;
+  onBack: () => void;
 }
 
-const GenerateLook = ({ userImgs, fitImg, onGenerated }: GenerateLookProps) => {
+const GenerateLook = ({ userImgs, fitImg, onGenerated, onBack }: GenerateLookProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [userImgIdx, setUserImgIdx] = useState(0);
+
+  // Compress image to reduce storage size
+  const compressImage = (dataUrl: string, quality: number = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions (max 800px width/height)
+        const maxSize = 800;
+        let { width, height } = img;
+        
+        if (width > height && width > maxSize) {
+          height = (height * maxSize) / width;
+          width = maxSize;
+        } else if (height > maxSize) {
+          width = (width * maxSize) / height;
+          height = maxSize;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+      
+      img.src = dataUrl;
+    });
+  };
+
+  // Save to localStorage with compression and cleanup
+  const saveToLocalStorage = async () => {
+    try {
+      // Compress the image
+      const compressedImage = await compressImage(generatedImage!, 0.6);
+      
+      const countKey = `zyora:looks:count:${auth.currentUser?.uid}`;
+      const prev = parseInt(localStorage.getItem(countKey) || '0', 10) || 0;
+      const newCount = prev + 1;
+      
+      // Clean up old images if we have more than 10
+      if (newCount > 10) {
+        await cleanupOldImages();
+      }
+      
+      // Save the compressed image data
+      const imageKey = `zyora:looks:${auth.currentUser?.uid}:${Date.now()}`;
+      
+      try {
+        localStorage.setItem(imageKey, compressedImage);
+        localStorage.setItem(countKey, String(newCount));
+        
+        // Update centralized count
+        try {
+          await countManager.incrementCount('savedCount', 1);
+        } catch (error) {
+          console.warn('Failed to update centralized count:', error);
+        }
+        
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('zyora:counts:updated'));
+        }
+        
+        toast({ title: 'Saved locally', description: 'Look saved to browser storage!' });
+      } catch (error: any) {
+        if (error.name === 'QuotaExceededError') {
+          // If still too large, try with more compression
+          const highlyCompressedImage = await compressImage(generatedImage!, 0.3);
+          localStorage.setItem(imageKey, highlyCompressedImage);
+          localStorage.setItem(countKey, String(newCount));
+          
+          // Update centralized count
+          try {
+            await countManager.incrementCount('savedCount', 1);
+          } catch (error) {
+            console.warn('Failed to update centralized count:', error);
+          }
+          
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('zyora:counts:updated'));
+          }
+          
+          toast({ title: 'Saved locally (compressed)', description: 'Look saved with high compression!' });
+        } else {
+          throw error;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save to localStorage:', error);
+      toast({ title: 'Storage full', description: 'Unable to save locally. Please try again later.' });
+    }
+  };
+
+  // Clean up old images to free space
+  const cleanupOldImages = async () => {
+    if (!auth.currentUser) return;
+    
+    const userKey = `zyora:looks:${auth.currentUser.uid}:`;
+    const keysToRemove: string[] = [];
+    
+    // Find all keys for this user
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(userKey)) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    // Sort by timestamp (oldest first)
+    keysToRemove.sort((a, b) => {
+      const timestampA = parseInt(a.split(':').pop() || '0');
+      const timestampB = parseInt(b.split(':').pop() || '0');
+      return timestampA - timestampB;
+    });
+    
+    // Remove oldest images (keep only the 5 most recent)
+    const toRemove = keysToRemove.slice(0, Math.max(0, keysToRemove.length - 5));
+    toRemove.forEach(key => localStorage.removeItem(key));
+    
+    console.log(`Cleaned up ${toRemove.length} old images`);
+  };
 
   
 
@@ -39,6 +165,11 @@ const GenerateLook = ({ userImgs, fitImg, onGenerated }: GenerateLookProps) => {
       setGeneratedImage(fullDataUrl);
 
       // Increment generated count ONLY on successful generation
+      try {
+        await countManager.incrementCount('generatedCount', 1);
+      } catch (error) {
+        console.warn('Failed to increment generated count:', error);
+      }
 
       onGenerated();
      
@@ -56,17 +187,115 @@ const GenerateLook = ({ userImgs, fitImg, onGenerated }: GenerateLookProps) => {
     if (!auth.currentUser) return toast({ title: 'Not signed in', description: 'Sign in to save looks' });
 
     try {
-      const looksRef = collection(db, 'users', auth.currentUser.uid, 'looks');
-      await addDoc(looksRef, {
-        image: generatedImage,
+      // Check if Firebase is properly configured by testing the storage bucket
+      const storageBucket = import.meta.env.PLASMO_PUBLIC_FIREBASE_STORAGE_BUCKET || 
+                           import.meta.env.VITE_FIREBASE_STORAGE_BUCKET;
+      
+      // More comprehensive check for Firebase configuration
+      const isFirebaseConfigured = storageBucket && 
+                                   !storageBucket.includes('__FIREBASE_') && 
+                                   !storageBucket.includes('undefined') &&
+                                   (storageBucket.includes('.appspot.com') || storageBucket.includes('.firebasestorage.app'));
+      
+      console.log('Firebase configuration check:', {
+        storageBucket,
+        isFirebaseConfigured,
+        hasAppspot: storageBucket?.includes('.appspot.com'),
+        hasFirebaseStorage: storageBucket?.includes('.firebasestorage.app'),
+        hasUndefined: storageBucket?.includes('undefined'),
+        hasPlaceholder: storageBucket?.includes('__FIREBASE_')
+      });
+      
+      if (!isFirebaseConfigured) {
+        console.warn('Firebase Storage not properly configured, saving to localStorage instead');
+        // Fallback: save to localStorage with compression
+        await saveToLocalStorage();
+        return;
+      }
+
+      // Convert data URL to blob
+      const res = await fetch(generatedImage);
+      const blob = await res.blob();
+
+      const uid = auth.currentUser.uid;
+      const filename = `looks/${uid}/${Date.now()}.png`;
+      const ref = storageRef(storage, filename);
+
+      // Upload the image bytes to Firebase Storage with retry logic
+      let uploadSuccess = false;
+      let lastError = null;
+      
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await uploadBytes(ref, blob);
+          uploadSuccess = true;
+          break;
+        } catch (error: any) {
+          lastError = error;
+          console.warn(`Upload attempt ${attempt} failed:`, error.message);
+          
+          // Check for specific errors that indicate Firebase is not properly configured
+          if (error.message?.includes('404') || 
+              error.message?.includes('CORS') || 
+              error.message?.includes('permission-denied') ||
+              error.message?.includes('storage/unknown')) {
+            console.warn('Firebase Storage appears to be misconfigured, falling back to localStorage');
+            // Force fallback to localStorage with compression
+            await saveToLocalStorage();
+            return;
+          }
+          
+          if (attempt < 3) {
+            // Wait before retry (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          }
+        }
+      }
+
+      if (!uploadSuccess) {
+        throw lastError || new Error('Upload failed after 3 attempts');
+      }
+
+      const url = await getDownloadURL(ref);
+
+      // Save metadata to Firestore with a small payload (URL + timestamp)
+      const looksRef = collection(db, 'users', uid, 'looks');
+      const docRef = await addDoc(looksRef, {
+        image: url,
         createdAt: serverTimestamp(),
       });
+      console.log('Saved doc ID:', docRef.id);
+
       toast({ title: 'Saved', description: 'Look saved successfully!' });
-    } catch (e) {
+      
+      // Update centralized count
+      try {
+        await countManager.incrementCount('savedCount', 1);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('zyora:counts:updated'));
+        }
+      } catch (e) {
+        console.warn('Failed to update centralized count:', e);
+      }
+    } catch (e: any) {
       console.error('Failed to save look', e);
-      toast({ title: 'Error', description: 'Failed to save look' });
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to save look';
+      if (e.message?.includes('CORS')) {
+        errorMessage = 'CORS error: Please check Firebase Storage configuration';
+      } else if (e.message?.includes('retry-limit-exceeded')) {
+        errorMessage = 'Upload timeout: Please try again';
+      } else if (e.message?.includes('permission-denied')) {
+        errorMessage = 'Permission denied: Please sign in again';
+      } else if (e.message?.includes('unauthenticated')) {
+        errorMessage = 'Authentication required: Please sign in';
+      }
+      
+      toast({ title: 'Error', description: errorMessage });
     }
   };
+  
 
   const hasMultipleUserImgs = userImgs.length > 1;
   const currentUserImg = userImgs[userImgIdx] ?? null;

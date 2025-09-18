@@ -46,11 +46,7 @@ const UserInfo = () => {
           <DropdownMenuItem onClick={handleSignOut}>
             Sign Out
           </DropdownMenuItem>
-          {/* {method && (
-            <DropdownMenuItem disabled>
-              Signed in with {method}
-            </DropdownMenuItem>
-          )} */}
+          
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

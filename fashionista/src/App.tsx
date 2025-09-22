@@ -7,11 +7,10 @@ import SignIn from "./components/SignIn";
 import { signInWithChrome } from "./lib/chromeAuth";
 import { onAuthChanged } from "./lib/firebase";
 import UserInfo from "./components/UserInfo";
-import { auth } from "./lib/firebase";
+import {db, auth } from "./lib/firebase";
 import Profile from "./components/Profile";
 import History from "./components/History";
-import { countManager } from "./lib/countManager";
-import type { UserCounts } from "./lib/countManager";
+import { doc, onSnapshot } from "firebase/firestore";
 
 export default function App() {
   const [showGenerate, setShowGenerate] = useState(false);
@@ -20,59 +19,34 @@ export default function App() {
   const [signedIn, setSignedIn] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [userCounts, setUserCounts] = useState<UserCounts>({
-    generatedCount: 0,
-    savedCount: 0,
-    lastUpdated: new Date()
+  const [looksCount, setLooksCount] = useState<number>(0);
+
+
+  useEffect(() => {
+  if (!auth.currentUser) return;
+
+  const userRef = doc(db, "users", auth.currentUser.uid);
+  const unsub = onSnapshot(userRef, (snap) => {
+    if (snap.exists()) {
+      const count = snap.data().generatedCount || 0;
+      setLooksCount(count);
+      if (auth.currentUser) {
+        localStorage.setItem(`zyora:looks:count:${auth.currentUser.uid}`, String(count));
+      }
+    }
   });
 
-  // Load initial counts
-  useEffect(() => {
-    if (!auth.currentUser) return;
-    
-    const loadCounts = async () => {
-      try {
-        const counts = await countManager.getCounts();
-        setUserCounts(counts);
-      } catch (error) {
-        console.warn('Failed to load counts:', error);
-      }
-    };
-    
-    loadCounts();
-  }, [auth.currentUser]);
-
-  // Subscribe to real-time count updates
-  useEffect(() => {
-    if (!auth.currentUser) return;
-    
-    const unsubscribe = countManager.subscribeToCounts((counts) => {
-      setUserCounts(counts);
-    });
-    
-    return unsubscribe;
-  }, [auth.currentUser]);
-
-  // Listen for count updates from other components
-  useEffect(() => {
-    const handler = () => {
-      // Trigger a refresh of counts
-      if (auth.currentUser) {
-        countManager.getCounts().then(setUserCounts).catch(console.warn);
-      }
-    };
-    
-    window.addEventListener('zyora:counts:updated', handler);
-    return () => window.removeEventListener('zyora:counts:updated', handler);
-  }, []);
+  return () => unsub();
+}, [auth.currentUser]);
 
   
   useEffect(() => {
-    const unsub = onAuthChanged((user) => {
+    const unsub = onAuthChanged((user: any) => {
       setSignedIn(!!user);
     });
     return () => unsub();
   }, []);
+
 
   return (
     <div
@@ -89,8 +63,11 @@ export default function App() {
         <div className="flex flex-col items-center w-full relative">
           <div className="absolute top-4 right-6 flex items-center gap-4">
             <div className="relative">
-              <div className="absolute -top-2 -right-4 text-black rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
-                {userCounts.savedCount}
+              <div 
+                  className="absolute -top-2 -right-2 text-black rounded-full w-6 h-6 flex items-center justify-center animate-pulse cursor-help"
+                  title={`${7-looksCount} of 7 free look generations left`}
+                >
+                {looksCount}/7
               </div>
             </div>
             <div>
@@ -131,6 +108,9 @@ export default function App() {
             >
               Saved Looks
             </button>
+            
+            
+            
           </div>
 
           <hr className="border-t border-[#eee] w-full justify-self-center mb-1" />
@@ -152,18 +132,17 @@ export default function App() {
                   setFitImg={setFitImg}
                   onTryOn={() => setShowGenerate(true)}
                   userImgs={userImgs}
-                  looksCount={userCounts.savedCount} 
+                  looksCount={looksCount}
                 />
               </div>
             ) : (
               <div className="flex w-full h-full items-center justify-center">
-                <GenerateLook
+                  <GenerateLook
                   userImgs={userImgs}
                   fitImg={fitImg}
                   onBack={() => setShowGenerate(false)}
                   onGenerated={() => {
-                    // Count is now managed centrally by countManager
-                    // No need to manually update here as it's handled in GenerateLook.tsx
+                    // generated count is handled in GenerateLook.tsx
                   }}
                 />
               </div>

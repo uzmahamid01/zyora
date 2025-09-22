@@ -67,10 +67,8 @@ export async function signInWithGoogleCredential(token: string) {
   if (token.startsWith("ya29.")) {
     accessToken = token;
   } else if (token.split('.').length >= 3) {
-    // Looks like a JWT (id_token)
     idToken = token;
   } else {
-    // Fallback — treat as access token
     accessToken = token;
   }
 
@@ -83,7 +81,6 @@ export async function signInWithFirebaseCustomToken(customToken: string) {
 }
 
 export async function signInWithGooglePopup() {
-  // Browser fallback for dev: use Firebase popup flow when chrome.identity isn't available.
   try {
     return await signInWithPopup(auth, provider);
   } catch (err: any) {
@@ -94,7 +91,6 @@ export async function signInWithGooglePopup() {
         err?.message?.includes('window.closed')) {
       console.log("COOP/COEP issue detected, trying alternative approach...");
       
-      // Try to open popup in a different way
       try {
         const popup = window.open('', 'auth-popup', 'width=500,height=600,scrollbars=yes,resizable=yes');
         if (popup) {
@@ -103,17 +99,15 @@ export async function signInWithGooglePopup() {
             if (!popup.closed) {
               popup.close();
             }
-          }, 30000); // 30 second timeout
+          }, 30000); 
         }
         
-        // Try popup again
         return await signInWithPopup(auth, provider);
       } catch (retryErr) {
         console.warn("Retry popup also failed:", retryErr);
       }
     }
     
-    // Final fallback: try redirect
     try {
       console.log("Attempting redirect authentication...");
       await signInWithRedirect(auth, provider);

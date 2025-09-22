@@ -2,12 +2,18 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read/write their own looks documents
-    match /users/{userId}/looks/{docId} {
+
+    // User metadata (e.g., generatedCount)
+    match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Looks subcollection under each user
+      match /looks/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
-    // Deny everything else by default
+    // Deny everything else
     match /{document=**} {
       allow read, write: if false;
     }

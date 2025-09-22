@@ -309,16 +309,6 @@ export default app;
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
-    console.log("🚀 Backend server running on http://localhost:" + PORT);
-    console.log("📋 Available endpoints:");
-    console.log("  GET  /health - Health check");
-    console.log("  POST /exchange-token - Exchange Google token for Firebase token");
-    console.log("  POST /generate-look - Generate AI look");
-    console.log("  GET  /fetch-image - Fetch image by URL");
-    console.log("🔧 Environment check:");
-    console.log("  Firebase configured:", !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
-    console.log("  GCP Project ID:", process.env.GCP_PROJECT_ID || "Not set");
-    console.log("  GCP Region:", process.env.GCP_REGION || "us-central1");
   });
 }
 

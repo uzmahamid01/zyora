@@ -6,7 +6,7 @@ import { auth, db, storage } from '../lib/firebase';
 import { toast } from '../components/hooks/use-toast';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { countManager } from '../lib/countManager';
+import { doc, increment, setDoc } from "firebase/firestore";
 
 interface GenerateLookProps {
   userImgs: File[];
@@ -76,15 +76,7 @@ const GenerateLook = ({ userImgs, fitImg, onGenerated, onBack }: GenerateLookPro
         localStorage.setItem(countKey, String(newCount));
         
         // Update centralized count
-        try {
-          await countManager.incrementCount('savedCount', 1);
-        } catch (error) {
-          console.warn('Failed to update centralized count:', error);
-        }
-        
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('zyora:counts:updated'));
-        }
+        // saved looks are local-only; do not update centralized generatedCount
         
         toast({ title: 'Saved locally', description: 'Look saved to browser storage!' });
       } catch (error: any) {
@@ -95,15 +87,7 @@ const GenerateLook = ({ userImgs, fitImg, onGenerated, onBack }: GenerateLookPro
           localStorage.setItem(countKey, String(newCount));
           
           // Update centralized count
-          try {
-            await countManager.incrementCount('savedCount', 1);
-          } catch (error) {
-            console.warn('Failed to update centralized count:', error);
-          }
-          
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('zyora:counts:updated'));
-          }
+          // saved looks are local-only; do not update centralized generatedCount
           
           toast({ title: 'Saved locally (compressed)', description: 'Look saved with high compression!' });
         } else {
@@ -145,11 +129,9 @@ const GenerateLook = ({ userImgs, fitImg, onGenerated, onBack }: GenerateLookPro
     console.log(`Cleaned up ${toRemove.length} old images`);
   };
 
-  
+
 
   const handleGenerate = async () => {
-
-    
     if (!fitImg || userImgs.length === 0) return;
 
     const formData = new FormData();
@@ -164,15 +146,13 @@ const GenerateLook = ({ userImgs, fitImg, onGenerated, onBack }: GenerateLookPro
       const fullDataUrl = `data:image/png;base64,${data.image}`;
       setGeneratedImage(fullDataUrl);
 
-      // Increment generated count ONLY on successful generation
-      try {
-        await countManager.incrementCount('generatedCount', 1);
-      } catch (error) {
-        console.warn('Failed to increment generated count:', error);
+      //increment generatedCount in Firestore
+      if (auth.currentUser) {
+        const userRef = doc(db, "users", auth.currentUser.uid);
+        await setDoc(userRef, { generatedCount: increment(1) }, { merge: true });
       }
 
       onGenerated();
-     
 
     } catch (e) {
       console.error("Failed to generate look", e);
@@ -269,14 +249,7 @@ const GenerateLook = ({ userImgs, fitImg, onGenerated, onBack }: GenerateLookPro
       toast({ title: 'Saved', description: 'Look saved successfully!' });
       
       // Update centralized count
-      try {
-        await countManager.incrementCount('savedCount', 1);
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('zyora:counts:updated'));
-        }
-      } catch (e) {
-        console.warn('Failed to update centralized count:', e);
-      }
+        // saved looks are local-only; do not update centralized generatedCount
     } catch (e: any) {
       console.error('Failed to save look', e);
       

@@ -3,9 +3,8 @@ import { auth, db, storage } from '../lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Download, Trash2 } from 'lucide-react';
 import { collection, query, onSnapshot, orderBy, doc, deleteDoc } from 'firebase/firestore';
-import { ref as storageRef, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, getDownloadURL, deleteObject } from 'firebase/storage';
 import { toast } from '../components/hooks/use-toast';
-import { countManager } from '../lib/countManager';
 
 interface HistoryEntry {
   id: string;
@@ -151,20 +150,53 @@ export default function History({ }: { onBack?: () => void }) {
         loadFromLocalStorage();
         toast({ title: 'Deleted', description: 'Look removed successfully' });
       } else {
-        // Remove from Firebase
+        // Attempt to delete the associated storage object first
+        try {
+          const entry = entries.find((en) => en.id === id);
+          if (entry && entry.image) {
+            const img = entry.image;
+            let refToDelete: ReturnType<typeof storageRef> | null = null;
+
+            if (typeof img === 'string') {
+              if (img.startsWith('gs://')) {
+                // gs://bucket/path -> remove prefix to get path
+                const withoutGS = img.replace(/^gs:\/\/[A-Za-z0-9.\-]+\//, '');
+                refToDelete = storageRef(storage, withoutGS);
+              } else if (img.startsWith('http://') || img.startsWith('https://')) {
+                try {
+                  const url = new URL(img);
+                  const parts = url.pathname.split('/o/');
+                  if (parts.length > 1) {
+                    const objectPath = decodeURIComponent(parts[1].split('?')[0]);
+                    refToDelete = storageRef(storage, objectPath);
+                  }
+                } catch (e) {
+                  // ignore parse errors
+                }
+              } else {
+                // Treat as a storage path already
+                refToDelete = storageRef(storage, img);
+              }
+            }
+
+            if (refToDelete) {
+              try {
+                await deleteObject(refToDelete);
+              } catch (err) {
+                console.warn('Failed to delete storage object for', id, err);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Error while attempting storage deletion', err);
+        }
+
+        // Remove Firestore document
         await deleteDoc(doc(db, 'users', user.uid, 'looks', id));
         toast({ title: 'Deleted', description: 'Look removed successfully' });
       }
       
-      // Decrement the saved count
-      try {
-        await countManager.incrementCount('savedCount', -1);
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('zyora:counts:updated'));
-        }
-      } catch (error) {
-        console.warn('Failed to update count after deletion:', error);
-      }
+      // savedCount is local-only; do not update centralized generatedCount
     } catch (e) {
       console.error('Failed to delete', e);
       toast({ title: 'Error', description: 'Failed to delete look' });

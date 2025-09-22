@@ -1,4 +1,3 @@
-// Simple in-memory store to track the last used authentication method not needed 
 let lastMethod: "chrome" | "popup" | "redirect" | null = null;
 
 export function setLastAuthMethod(m: "chrome" | "popup" | "redirect") {

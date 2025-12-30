@@ -1,10 +1,29 @@
-import { auth } from '../lib/firebase'
+import { auth, db } from '../lib/firebase'
 import { useEffect, useState } from 'react'
+import { DocumentSnapshot, onSnapshot, doc } from 'firebase/firestore'
 
 function Profile() {
   const user = auth.currentUser;
   const [looksCount, setLooksCount] = useState<number | null>(null);
 
+
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const userRef = doc(db, 'users', auth.currentUser.uid);
+
+    const unsub = onSnapshot(userRef, (snap: DocumentSnapshot) => {
+      if (snap.exists()) {
+        const count = snap.data()?.generatedCount || 0;
+        setLooksCount(count);
+        if (auth.currentUser) {
+          localStorage.setItem(`zyora:looks:count:${auth.currentUser.uid}`, String(count));
+        }
+      }
+    });
+
+    return () => unsub();
+  }, [auth.currentUser]);
   
 
   return (

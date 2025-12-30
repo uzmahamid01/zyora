@@ -13,12 +13,9 @@ dotenv.config();
 const app = express();
 
 // ------------------- MIDDLEWARES -------------------
-
-
 // Define allowed origins
 const allowedOrigins = [
   "http://localhost:5173",   // dev
-  "chrome-extension://*",    // chrome extension
   "https://your-frontend.com" // prod
 ];
 
@@ -27,22 +24,18 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
-    // Allow chrome extensions
+    // Allow any chrome extension
     if (origin && origin.startsWith('chrome-extension://')) {
       return callback(null, true);
     }
-    
     // Allow localhost for development
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    
     // Allow any localhost port for development
     if (origin && origin.startsWith('http://localhost:')) {
       return callback(null, true);
     }
-    
     callback(new Error('Not allowed by CORS'));
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -97,7 +90,6 @@ const PROJECT_ID = process.env.GCP_PROJECT_ID;
 const REGION = process.env.GCP_REGION || "us-central1";
 
 // ------------------- ROUTES ------------------- //
-
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.json({ 
@@ -167,9 +159,6 @@ app.post("/exchange-token", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-
-
 
 // GET /fetch-image?url=<image-url>
 app.get("/fetch-image", async (req, res) => {
@@ -298,10 +287,6 @@ app.post(
     }
   }
 );
-
-
-
-
 
 export default app;
 

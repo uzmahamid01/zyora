@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithCredential, onAuthStateChanged, signOut, signInWithPopup, signInWithRedirect } from "firebase/auth";
-import { signInWithCustomToken } from "firebase/auth";
+import { signInWithCustomToken } from "firebase/auth/web-extension";
+import { GoogleAuthProvider, signInWithCredential, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut } from "firebase/auth";
+import {getAuth, connectAuthEmulator} from "firebase/auth/web-extension";
 import type { User } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --project tsconfig.background.json && vite build && node scripts/inject-client-id.js",
+    "build": "tsc --project tsconfig.background.json && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

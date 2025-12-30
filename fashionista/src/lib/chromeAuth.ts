@@ -59,12 +59,21 @@ export async function signInWithChrome(interactive = true) {
 
     // Fallback to Firebase popup for normal browsers
     console.warn("Falling back to popup sign-in for dev browser:", errMsg);
-    toast({ title: "Auth", description: `Falling back to popup sign-in: ${errMsg}` });
+    toast({ title: "Auth", description: "Using browser authentication" });
 
-    const res = await signInWithGooglePopup();
-    setLastAuthMethod("popup");
-    toast({ title: "Signed in", description: "Signed in with popup" });
-    return res;
+    try {
+      const res = await signInWithGooglePopup();
+      setLastAuthMethod("popup");
+      toast({ title: "Signed in", description: "Successfully signed in" });
+      return res;
+    } catch (popupError) {
+      console.error("Popup authentication also failed:", popupError);
+      toast({ 
+        title: "Authentication Error", 
+        description: "Please enable popups or install the Chrome extension for full functionality" 
+      });
+      throw new Error("All authentication methods failed. Please try refreshing the page or installing the Chrome extension.");
+    }
   }
 }
 

@@ -61,14 +61,14 @@ export default function App() {
         />
       ) : (
         <div className="flex flex-col items-center w-full relative">
-          <div className="absolute top-4 right-6 flex items-center gap-4">
+          <div className="absolute top-7 right-6 flex items-center gap-4">
             <div className="relative">
-              <div 
+              {/* <div 
                   className="absolute -top-2 -right-2 text-black rounded-full w-6 h-6 flex items-center justify-center animate-pulse cursor-help"
                   title={`${7-looksCount} of 7 free look generations left`}
                 >
                 {looksCount}/7
-              </div>
+              </div> */}
             </div>
             <div>
               <UserInfo />
@@ -77,7 +77,7 @@ export default function App() {
 
           <h2 className="text-center font-bold py-4 text-3xl md:text-4xl text-[#404040] mb-0">
             ZYORA <br />
-            <span className="font-normal text-lg md:text-xl text-[#404040]">
+            <span className="font-normal text-sm md:text-xl text-[#404040]">
               Style . Simplified . Virtually
             </span>
           </h2>
@@ -96,6 +96,12 @@ export default function App() {
                 setShowHistory(false);
               }}
             >
+              <div 
+                  className="absolute top-1 right-4 text-black rounded-full w-6 h-6 flex items-center justify-center animate-pulse cursor-help"
+                  title={`${7-looksCount} of 7 free look generations left`}
+                >
+                {looksCount}/7
+              </div>
               Upload New
             </button>
 
@@ -108,6 +114,15 @@ export default function App() {
             >
               Saved Looks
             </button>
+            {/* <button
+              className={`w-1/2 backdrop-blur-sm text-black hover:bg-white/10 cursor-pointer py-3 transition-all ${
+                showProfile ? 'shadow-lg shadow-black/20' : ''
+              }`}
+              style={{ background: 'transparent', border: 'none', borderRadius: 0, outline: 'none' }}
+              onClick={() => setShowProfile(true)}
+            >
+              Profile
+            </button> */}
             
             
             

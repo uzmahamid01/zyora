@@ -17,7 +17,8 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",   // dev
   "https://your-frontend.com", // prod
-  "chrome-extension://kdjkegciiimdmbomiimofpiciokocajh" // allow specific Chrome extension
+  "chrome-extension://kdjkegciiimdmbomiimofpiciokocajh", // allow specific Chrome extension
+  "chrome-extension://fnjejfgmebolpelbegpjekpafcammkhc" // allow new Chrome extension
 ];
 
 // Apply CORS to all requests
@@ -25,14 +26,13 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    // Allow the specific Chrome extension
-    if (origin === 'chrome-extension://kdjkegciiimdmbomiimofpiciokocajh') {
+    // Allow the specific Chrome extensions
+    if (
+      origin === 'chrome-extension://kdjkegciiimdmbomiimofpiciokocajh' ||
+      origin === 'chrome-extension://fnjejfgmebolpelbegpjekpafcammkhc'
+    ) {
       return callback(null, true);
     }
-    // Allow any chrome extension (optional, can be removed for stricter security)
-    // if (origin && origin.startsWith('chrome-extension://')) {
-    //   return callback(null, true);
-    // }
     // Allow localhost for development
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);

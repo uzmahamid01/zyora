@@ -15,10 +15,9 @@ const app = express();
 // ------------------- MIDDLEWARES -------------------
 // Define allowed origins
 const allowedOrigins = [
-  "http://localhost:5173",   // dev
-  "https://your-frontend.com", // prod
-  "chrome-extension://kdjkegciiimdmbomiimofpiciokocajh", // allow specific Chrome extension
-  "chrome-extension://fnjejfgmebolpelbegpjekpafcammkhc" // allow new Chrome extension
+  "http://localhost:5173",  
+  "chrome-extension://kdjkegciiimdmbomiimofpiciokocajh",
+  "chrome-extension://fnjejfgmebolpelbegpjekpafcammkhc"
 ];
 
 // Apply CORS to all requests
@@ -209,6 +208,8 @@ app.post(
     { name: "fitImg", maxCount: 1 },
   ]),
   async (req, res) => {
+    console.log("Received files:", req.files);
+    console.log("Headers:", req.headers);
     // Verify Firebase ID token if provided in Authorization header (Bearer <idToken>)
     let verifiedUid = null;
     try {
@@ -299,8 +300,10 @@ export default app;
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
+    console.log(`Backend running locally on http://localhost:${PORT}`);
   });
 }
+
 
 
 

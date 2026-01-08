@@ -91,7 +91,7 @@ export default function UploadFitPic({ fitImg, setFitImg, onTryOn, userImgs, loo
 
   const handleTryOn = () => {
     console.log("Current looksCount:", looksCount);
-    if ((looksCount ?? 0) >= 10) {
+    if ((looksCount ?? 0) >= 30) {
       alert("You’ve reached your free limit of 10 looks. Upgrade your plan to generate more.");
       return;
     }

@@ -18,7 +18,7 @@ export default function UploadFitPic({ fitImg, setFitImg, onTryOn, userImgs, loo
     if (!imageUrl) return;
     try {
       const response = await fetch(
-        `https://zyora-szo7.vercel.app/fetch-image?url=${encodeURIComponent(imageUrl)}`
+        `https://zyora-szo7.vercel.app/api/fetch-image?url=${encodeURIComponent(imageUrl)}`
       );
       if (!response.ok) throw new Error("Failed to fetch image from backend");
 
@@ -70,7 +70,7 @@ export default function UploadFitPic({ fitImg, setFitImg, onTryOn, userImgs, loo
       try {
         // backend proxy to avoid CORS issues
         const response = await fetch(
-          `https://zyora-szo7.vercel.app/fetch-image?url=${encodeURIComponent(url)}`
+          `https://zyora-szo7.vercel.app/api/fetch-image?url=${encodeURIComponent(url)}`
         );
         if (!response.ok) {
           let errorText = '';

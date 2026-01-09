@@ -5,7 +5,7 @@
   "description": "Fashion Virtual Try On Extension",
   "permissions": ["activeTab","sidePanel", "storage", "identity", "contextMenus"],
   "oauth2": {
-    "client_id": "943615009192-ict33shkds0jsrsp73hh9bmo7ut5funl.apps.googleusercontent.com",
+    "client_id": "943615009192-s6usr3jtaraqcg9a2arrjvncsrvagtbj.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/userinfo.email",
       "https://www.googleapis.com/auth/userinfo.profile"

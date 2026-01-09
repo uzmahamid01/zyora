@@ -141,8 +141,16 @@ const GenerateLook = ({ userImgs, fitImg, onGenerated, onBack }: GenerateLookPro
     setIsGenerating(true);
 
     try {
-      const res = await fetch("https://zyora-szo7.vercel.app/generate-look", { method: "POST", body: formData });
-      // const res = await fetch("http://localhost:5000/generate-look", { method: "POST", body: formData });
+      let res: Response;
+      const res1 = await fetch("https://zyora-szo7.vercel.app/api/generate-look", { method: "POST", body: formData });
+      const res2 = await fetch("http://localhost:5000/api/generate-look", { method: "POST", body: formData });
+      
+      if (res2.ok) {
+        res = res2;
+      } else {
+        res = res1;
+      }
+      
       const data = await res.json();
       const fullDataUrl = `data:image/png;base64,${data.image}`;
       setGeneratedImage(fullDataUrl);

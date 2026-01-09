@@ -1,9 +1,11 @@
-
+import multer from "multer";
 import fetch from "node-fetch";
 import fs from "fs";
 import { GoogleAuth } from "google-auth-library";
 import admin from "firebase-admin";
-import formidable from "formidable";
+
+// Multer: use /tmp for Vercel ephemeral storage
+const upload = multer({ dest: "/tmp" });
 
 const PROJECT_ID = process.env.GCP_PROJECT_ID;
 const REGION = process.env.GCP_REGION || "us-central1";
@@ -15,7 +17,9 @@ try {
   if (raw && raw.trim().startsWith("{")) {
     credentials = JSON.parse(raw);
   }
-} catch (e) {}
+} catch (e) {
+  // continue; some routes might still work without credentials
+}
 const auth = new GoogleAuth({
   credentials: credentials || undefined,
   scopes: ["https://www.googleapis.com/auth/cloud-platform"],
@@ -32,6 +36,7 @@ try {
   }
 } catch (e) {}
 
+// CORS helper
 function setCORS(res) {
   res.setHeader("Access-Control-Allow-Origin", "chrome-extension://kdjkegciiimdmbomiimofpiciokocajh");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
@@ -53,25 +58,21 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
-  // Parse multipart form with formidable
-  const form = new formidable.IncomingForm({
-    multiples: false,
-    uploadDir: "/tmp",
-    keepExtensions: true,
-    maxFileSize: 15 * 1024 * 1024, // 15MB
-  });
-  form.parse(req, async (err, fields, files) => {
+  upload.fields([
+    { name: "userImgs", maxCount: 1 },
+    { name: "fitImg", maxCount: 1 },
+  ])(req, res, async (err) => {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
     try {
-      const userFile = files["userImgs"] || files["userImgs[]"];
-      const fitFile = files["fitImg"] || files["fitImg[]"];
+      const userFile = req.files["userImgs"]?.[0];
+      const fitFile = req.files["fitImg"]?.[0];
       if (!userFile || !fitFile) {
         return res.status(400).json({ error: "Images missing" });
       }
-      const userBase64 = fs.readFileSync(userFile.filepath || userFile.path).toString("base64");
-      const fitBase64 = fs.readFileSync(fitFile.filepath || fitFile.path).toString("base64");
+      const userBase64 = fs.readFileSync(userFile.path).toString("base64");
+      const fitBase64 = fs.readFileSync(fitFile.path).toString("base64");
       const client = await auth.getClient();
       const accessToken = await client.getAccessToken();
       const url = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/virtual-try-on-preview-08-04:predict`;

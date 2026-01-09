@@ -72,12 +72,23 @@ export default function UploadFitPic({ fitImg, setFitImg, onTryOn, userImgs, loo
         const response = await fetch(
           `https://zyora-szo7.vercel.app/fetch-image?url=${encodeURIComponent(url)}`
         );
-        if (!response.ok) throw new Error('Failed to fetch dropped image');
+        if (!response.ok) {
+          let errorText = '';
+          try {
+            errorText = await response.text();
+          } catch (e) {
+            errorText = 'Could not read error body';
+          }
+          console.error('Image fetch failed:', response.status, response.statusText, errorText);
+          alert(`Failed to fetch dropped image. Status: ${response.status} ${response.statusText}. Details: ${errorText}`);
+          return;
+        }
         const blob = await response.blob();
         const filename = url.split('/').pop()?.split('?')[0] || 'fit.png';
         const file = new File([blob], filename, { type: blob.type });
         setFitImg(file);
       } catch (err) {
+        console.error('Image fetch error:', err);
         if (err instanceof Error) alert(err.message);
         else alert('Unknown error');
       }

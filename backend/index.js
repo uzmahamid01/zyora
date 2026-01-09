@@ -86,6 +86,28 @@ const PROJECT_ID = process.env.GCP_PROJECT_ID;
 const REGION = process.env.GCP_REGION || "us-central1";
 
 // ------------------- ROUTES -------------------
+// ------------------- FETCH IMAGE PROXY -------------------
+app.get("/fetch-image", async (req, res) => {
+  const imageUrl = req.query.url;
+  if (!imageUrl || typeof imageUrl !== "string") {
+    return res.status(400).json({ error: "Missing or invalid url parameter" });
+  }
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      return res.status(response.status).json({ error: `Failed to fetch image: ${response.statusText}` });
+    }
+    const contentType = response.headers.get("content-type") || "application/octet-stream";
+    res.setHeader("Content-Type", contentType);
+    // Optionally set cache headers
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    const buffer = await response.arrayBuffer();
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    console.error("/fetch-image error:", err);
+    res.status(500).json({ error: "Failed to fetch image proxy", details: err.message });
+  }
+});
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",

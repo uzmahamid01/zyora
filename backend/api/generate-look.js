@@ -55,8 +55,8 @@ export default async function handler(req, res) {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Method not allowed" });
     }
-    // Parse multipart form with formidable
-    const form = new formidable.IncomingForm({
+    // Parse multipart form with formidable (ESM usage)
+    const form = formidable({
       multiples: false,
       uploadDir: "/tmp",
       keepExtensions: true,

@@ -79,6 +79,7 @@
 // This file is now only used for local development or as a placeholder.
 
 export default function handler(req, res) {
+  
   res.status(404).json({ error: "API routes are now in /api/*.js. See /api/generate-look, /api/fetch-image, /api/exchange-token, /api/health." });
 }
 //     });

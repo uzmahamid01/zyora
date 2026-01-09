@@ -8,6 +8,8 @@ import { GoogleAuth } from "google-auth-library";
 import admin from "firebase-admin";
 import dotenv from "dotenv";
 
+import { createServer as createVercelServer } from "vercel-node-server";
+
 dotenv.config();
 
 const app = express();
@@ -86,8 +88,11 @@ const PROJECT_ID = process.env.GCP_PROJECT_ID;
 const REGION = process.env.GCP_REGION || "us-central1";
 
 // ------------------- ROUTES -------------------
+// All routes are now under /api for Vercel compatibility
+const router = express.Router();
+
 // ------------------- FETCH IMAGE PROXY -------------------
-app.get("/fetch-image", async (req, res) => {
+router.get("/fetch-image", async (req, res) => {
   const imageUrl = req.query.url;
   if (!imageUrl || typeof imageUrl !== "string") {
     return res.status(400).json({ error: "Missing or invalid url parameter" });
@@ -108,7 +113,7 @@ app.get("/fetch-image", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch image proxy", details: err.message });
   }
 });
-app.get("/health", (req, res) => {
+router.get("/health", (req, res) => {
   res.json({
     status: "ok",
     firebaseConfigured: !!credentials,
@@ -117,7 +122,7 @@ app.get("/health", (req, res) => {
 });
 
 // ------------------- GENERATE LOOK -------------------
-app.post(
+router.post(
   "/generate-look",
   upload.fields([
     { name: "userImgs", maxCount: 1 },
@@ -188,15 +193,20 @@ app.post(
   }
 );
 
-// ------------------- SERVER -------------------
+
+// Mount router under /api for Vercel
+app.use("/api", router);
+
+// For Vercel: export handler
+export default app;
+
+// For local development only
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`🚀 Backend running on http://localhost:${PORT}`);
   });
 }
-
-export default app;
 
 
 

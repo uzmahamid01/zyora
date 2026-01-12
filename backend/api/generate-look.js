@@ -68,13 +68,21 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: err.message });
       }
       try {
+        console.log("[generate-look] Received files:", files);
         const userFile = files["userImgs"] || files["userImgs[]"];
         const fitFile = files["fitImg"] || files["fitImg[]"];
         if (!userFile || !fitFile) {
-          return res.status(400).json({ error: "Images missing" });
+          return res.status(400).json({ error: "Images missing", files });
         }
-        const userBase64 = fs.readFileSync(userFile.filepath || userFile.path).toString("base64");
-        const fitBase64 = fs.readFileSync(fitFile.filepath || fitFile.path).toString("base64");
+        const userPath = userFile.filepath || userFile.path;
+        const fitPath = fitFile.filepath || fitFile.path;
+        if (!userPath || !fitPath) {
+          console.error("Missing file path(s):", { userPath, fitPath, userFile, fitFile });
+          return res.status(400).json({ error: "File path missing for uploaded images", userPath, fitPath, userFile, fitFile });
+        }
+        const userBase64 = fs.readFileSync(userPath).toString("base64");
+        const fitBase64 = fs.readFileSync(fitPath).toString("base64");
+        // ...existing code...
         const client = await auth.getClient();
         const accessToken = await client.getAccessToken();
         const url = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/virtual-try-on-preview-08-04:predict`;
@@ -108,7 +116,7 @@ export default async function handler(req, res) {
           return res.status(500).json({ error: "Vertex AI request failed", details: result });
         }
         const generated = result.predictions[0].bytesBase64Encoded;
-        // If Firestore is available and we have a verified uid, increment a server-side generated looks counter
+        // ...existing code...
         let verifiedUid = null;
         try {
           const authHeader = req.headers["authorization"] || req.headers["Authorization"];

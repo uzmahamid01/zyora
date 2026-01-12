@@ -69,8 +69,11 @@ export default async function handler(req, res) {
       }
       try {
         console.log("[generate-look] Received files:", files);
-        const userFile = files["userImgs"] || files["userImgs[]"];
-        const fitFile = files["fitImg"] || files["fitImg[]"];
+        const userFileRaw = files["userImgs"] || files["userImgs[]"];
+        const fitFileRaw = files["fitImg"] || files["fitImg[]"];
+        // Handle array or single file
+        const userFile = Array.isArray(userFileRaw) ? userFileRaw[0] : userFileRaw;
+        const fitFile = Array.isArray(fitFileRaw) ? fitFileRaw[0] : fitFileRaw;
         if (!userFile || !fitFile) {
           return res.status(400).json({ error: "Images missing", files });
         }

@@ -37,6 +37,8 @@ function setCORS(req, res) {
   // List of allowed origins
   const allowedOrigins = [
     "http://localhost:3000",
+    "http://localhost:8081",
+    "http://localhost:8081/generate",
     "https://www.yemberzal.me",
     "chrome-extension://kdjkegciiimdmbomiimofpiciokocajh",
     "chrome-extension://fnjejfgmebolpelbegpjekpafcammkhc"

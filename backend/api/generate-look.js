@@ -34,9 +34,16 @@ try {
 } catch (e) {}
 
 function setCORS(req, res) {
-  const allowedOrigin = req.headers?.origin || "http://localhost:3000";
+  // List of allowed origins
+  const allowedOrigins = [
+    "http://localhost:3000",
+    "https://www.yemberzal.me",
+    "chrome-extension://kdjkegciiimdmbomiimofpiciokocajh",
+    "chrome-extension://fnjejfgmebolpelbegpjekpafcammkhc"
+  ];
+  const origin = req.headers?.origin;
+  const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
   res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
-  res.setHeader("Access-Control-Allow-Origin", "chrome-extension://kdjkegciiimdmbomiimofpiciokocajh");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
   res.setHeader("Access-Control-Allow-Credentials", "true");

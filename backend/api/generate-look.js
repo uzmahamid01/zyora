@@ -41,6 +41,8 @@ function setCORS(req, res) {
     "http://localhost:8081/generate",
     "https://www.yemberzal.me",
     "https://yemberzal.me",
+    "https://theyemberzal.com",
+    "https://www.theyemberzal.com",
     "chrome-extension://kdjkegciiimdmbomiimofpiciokocajh",
     "chrome-extension://fnjejfgmebolpelbegpjekpafcammkhc"
   ];
